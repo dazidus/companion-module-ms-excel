@@ -18,17 +18,17 @@ class ModuleInstance extends InstanceBase {
 			await this.verifyAPIAccess();
 			this.updateStatus(InstanceStatus.Ok);
 		} catch (error) {
-			this.log('error', 'Failed to authenticate with Microsoft Graph API');
-			this.updateStatus(InstanceStatus.Error);
+			this.log('error', `Failed to authenticate with Microsoft Graph API: ${error.message}`);
+			this.updateStatus(InstanceStatus.Error, 'Authentication failed');
 		}
 
-		this.updateActions(); // export actions
-		this.updateFeedbacks(); // export feedbacks
-		this.updateVariableDefinitions(); // export variable definitions
+		this.updateActions();
+		this.updateFeedbacks();
+		this.updateVariableDefinitions();
 	}
 
 	async destroy() {
-		this.log('debug', 'destroy');
+		this.log('debug', 'Module destroyed');
 	}
 
 	async configUpdated(config) {
@@ -37,11 +37,12 @@ class ModuleInstance extends InstanceBase {
 			await this.verifyAPIAccess();
 			this.updateStatus(InstanceStatus.Ok);
 		} catch (error) {
-			this.updateStatus(InstanceStatus.Error);
+			this.log('error', `Failed to reauthenticate with Microsoft Graph API: ${error.message}`);
+			this.updateStatus(InstanceStatus.Error, 'Reauthentication failed');
 		}
 	}
 
-	// Return config fields for web config
+	// Define configuration fields for the web interface
 	getConfigFields() {
 		return [
 			{
@@ -49,30 +50,35 @@ class ModuleInstance extends InstanceBase {
 				id: 'host',
 				label: 'OneDrive/SharePoint URL',
 				width: 8,
+				required: true,
 			},
 			{
 				type: 'textinput',
 				id: 'clientId',
 				label: 'Client ID',
 				width: 6,
+				required: true,
 			},
 			{
 				type: 'textinput',
 				id: 'clientSecret',
 				label: 'Client Secret',
 				width: 6,
+				required: true,
 			},
 			{
 				type: 'textinput',
 				id: 'fileId',
 				label: 'Excel File ID',
 				width: 8,
+				required: true,
 			},
 			{
 				type: 'textinput',
 				id: 'sheetName',
 				label: 'Default Sheet Name',
 				width: 4,
+				required: true,
 			},
 		];
 	}
@@ -92,11 +98,16 @@ class ModuleInstance extends InstanceBase {
 	async verifyAPIAccess() {
 		const token = await this.getAccessToken();
 		if (!token) {
-			throw new Error('Authentication failed');
+			throw new Error('No valid access token');
 		}
 	}
 
 	async getAccessToken() {
+		if (!this.config.clientId || !this.config.clientSecret) {
+			this.log('error', 'Client ID or Client Secret is missing in the configuration');
+			return null;
+		}
+
 		try {
 			const response = await axios.post(
 				'https://login.microsoftonline.com/common/oauth2/v2.0/token',
@@ -109,7 +120,7 @@ class ModuleInstance extends InstanceBase {
 			);
 			return response.data.access_token;
 		} catch (error) {
-			this.log('error', `Failed to retrieve access token: ${error.message}`);
+			this.log('error', `Failed to retrieve access token: ${error.response?.data?.error_description || error.message}`);
 			return null;
 		}
 	}
@@ -118,6 +129,11 @@ class ModuleInstance extends InstanceBase {
 		const token = await this.getAccessToken();
 		if (!token) {
 			this.log('error', 'Unable to update cell value: no access token');
+			return;
+		}
+
+		if (!this.config.fileId || !this.config.sheetName) {
+			this.log('error', 'File ID or Sheet Name is missing in the configuration');
 			return;
 		}
 
@@ -130,7 +146,7 @@ class ModuleInstance extends InstanceBase {
 			);
 			this.log('info', `Cell ${cellAddress} updated to ${value}`);
 		} catch (error) {
-			this.log('error', `Failed to update cell value: ${error.message}`);
+			this.log('error', `Failed to update cell value: ${error.response?.data?.error?.message || error.message}`);
 		}
 	}
 }
