@@ -1,26 +1,26 @@
 {
-	"id": "your-module-name",
-	"name": "your-module-name",
-	"shortname": "module-shortname",
-	"description": "A short one line description of your module",
-	"version": "0.0.0",
+	"id": "companion-module-ms-excel",
+	"name": "companion-module-ms-excel",
+	"shortname": "ms-excel",
+	"description": "A Bitfocus Companion module for integrating with Microsoft Excel using Microsoft Graph API.",
+	"version": "0.1.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-your-module-name.git",
-	"bugs": "https://github.com/bitfocus/companion-module-your-module-name/issues",
+	"repository": "git+https://github.com/dazidus/companion-module-ms-excel.git",
+	"bugs": "https://github.com/dazidus/companion-module-ms-excel/issues",
 	"maintainers": [
 		{
-			"name": "Your name",
-			"email": "Your email"
+			"name": "Valentin Hasebe",
+			"email": "vh@glue.at"
 		}
 	],
 	"runtime": {
 		"type": "node22",
 		"api": "nodejs-ipc",
-		"apiVersion": "0.0.0",
-		"entrypoint": "../main.js"
+		"apiVersion": "1.0.0",
+		"entrypoint": "./main.js"
 	},
 	"legacyIds": [],
-	"manufacturer": "Your company",
-	"products": ["Your product"],
-	"keywords": []
+	"manufacturer": "Glue Crew",
+	"products": ["Microsoft Excel Integration"],
+	"keywords": ["microsoft", "excel", "graph-api", "companion"]
 }
