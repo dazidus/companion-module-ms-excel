@@ -22,6 +22,7 @@ class ModuleInstance extends InstanceBase {
 		try {
 			await this.verifyAPIAccess();
 			this.updateStatus(InstanceStatus.Ok);
+			this.log('info', 'Module initialized successfully');
 		} catch (error) {
 			this.log('error', `Failed to authenticate with Microsoft Graph API: ${error.message}`);
 			this.updateStatus(InstanceStatus.Error, 'Authentication failed');
@@ -72,6 +73,7 @@ class ModuleInstance extends InstanceBase {
 	validateConfig() {
 		if (!this.config.clientId || !this.config.clientSecret || !this.config.fileId || !this.config.sheetName) {
 			this.log('error', 'Missing required configuration fields');
+			this.updateStatus(InstanceStatus.BadConfig);
 			return false;
 		}
 		return true;
@@ -79,7 +81,6 @@ class ModuleInstance extends InstanceBase {
 
 	async verifyAPIAccess() {
 		if (!this.validateConfig()) {
-			this.updateStatus(InstanceStatus.BadConfig);
 			return;
 		}
 
@@ -107,14 +108,23 @@ class ModuleInstance extends InstanceBase {
 			);
 			return response.data.access_token;
 		} catch (error) {
-			this.log('error', `Failed to retrieve access token: ${error.response?.data?.error_description || error.message}`);
+			this.log(
+				'error',
+				`Failed to retrieve access token: ${
+					error.response?.data?.error_description || error.response?.data?.error || error.message || 'Unknown error'
+				}`
+			);
 			return null;
 		}
 	}
 
 	async updateCellValue(cellAddress, value) {
 		if (!this.validateConfig()) {
-			this.updateStatus(InstanceStatus.BadConfig);
+			return;
+		}
+
+		if (value === undefined || value === null) {
+			this.log('error', `Invalid value provided for cell ${cellAddress}`);
 			return;
 		}
 
@@ -133,7 +143,12 @@ class ModuleInstance extends InstanceBase {
 			);
 			this.log('info', `Cell ${cellAddress} updated to ${value}`);
 		} catch (error) {
-			this.log('error', `Failed to update cell value: ${error.response?.data?.error?.message || error.message}`);
+			this.log(
+				'error',
+				`Failed to update cell value: ${
+					error.response?.data?.error?.message || error.message || 'Unknown error'
+				}`
+			);
 		}
 	}
 }
