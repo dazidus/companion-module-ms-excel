@@ -1,5 +1,5 @@
 const { InstanceBase, Regex, runEntrypoint, InstanceStatus } = require('@companion-module/base');
-const UpgradeScripts = require('./upgrades');
+const UpgradeScripts = [];
 const UpdateActions = require('./actions');
 const UpdateFeedbacks = require('./feedbacks');
 const UpdateVariableDefinitions = require('./variables');
@@ -13,7 +13,12 @@ class ModuleInstance extends InstanceBase {
 	async init(config) {
 		this.config = config;
 
-		// Verify API credentials and set the module status
+		if (!this.config.clientId || !this.config.clientSecret) {
+			this.log('error', 'Missing Client ID or Client Secret in configuration');
+			this.updateStatus(InstanceStatus.BadConfig);
+			return;
+		}
+
 		try {
 			await this.verifyAPIAccess();
 			this.updateStatus(InstanceStatus.Ok);
@@ -42,44 +47,13 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	// Define configuration fields for the web interface
 	getConfigFields() {
 		return [
-			{
-				type: 'textinput',
-				id: 'host',
-				label: 'OneDrive/SharePoint URL',
-				width: 8,
-				required: true,
-			},
-			{
-				type: 'textinput',
-				id: 'clientId',
-				label: 'Client ID',
-				width: 6,
-				required: true,
-			},
-			{
-				type: 'textinput',
-				id: 'clientSecret',
-				label: 'Client Secret',
-				width: 6,
-				required: true,
-			},
-			{
-				type: 'textinput',
-				id: 'fileId',
-				label: 'Excel File ID',
-				width: 8,
-				required: true,
-			},
-			{
-				type: 'textinput',
-				id: 'sheetName',
-				label: 'Default Sheet Name',
-				width: 4,
-				required: true,
-			},
+			{ type: 'textinput', id: 'host', label: 'OneDrive/SharePoint URL', width: 8 },
+			{ type: 'textinput', id: 'clientId', label: 'Client ID', width: 6 },
+			{ type: 'textinput', id: 'clientSecret', label: 'Client Secret', width: 6 },
+			{ type: 'textinput', id: 'fileId', label: 'Excel File ID', width: 8 },
+			{ type: 'textinput', id: 'sheetName', label: 'Default Sheet Name', width: 4 },
 		];
 	}
 
@@ -95,7 +69,20 @@ class ModuleInstance extends InstanceBase {
 		UpdateVariableDefinitions(this);
 	}
 
+	validateConfig() {
+		if (!this.config.clientId || !this.config.clientSecret || !this.config.fileId || !this.config.sheetName) {
+			this.log('error', 'Missing required configuration fields');
+			return false;
+		}
+		return true;
+	}
+
 	async verifyAPIAccess() {
+		if (!this.validateConfig()) {
+			this.updateStatus(InstanceStatus.BadConfig);
+			return;
+		}
+
 		const token = await this.getAccessToken();
 		if (!token) {
 			throw new Error('No valid access token');
@@ -126,14 +113,14 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	async updateCellValue(cellAddress, value) {
-		const token = await this.getAccessToken();
-		if (!token) {
-			this.log('error', 'Unable to update cell value: no access token');
+		if (!this.validateConfig()) {
+			this.updateStatus(InstanceStatus.BadConfig);
 			return;
 		}
 
-		if (!this.config.fileId || !this.config.sheetName) {
-			this.log('error', 'File ID or Sheet Name is missing in the configuration');
+		const token = await this.getAccessToken();
+		if (!token) {
+			this.log('error', 'Unable to update cell value: no access token');
 			return;
 		}
 
